@@ -8,7 +8,9 @@ public class Player2Controller : MonoBehaviour
     private Rigidbody2D rb;
     private float moveInputX = 0f;
     private int jumpCount = 0;
-    private int maxJumps = 2;
+    
+    // Đặt chính xác số lần nhảy tối đa là 2
+    private int maxJumps = 2; 
     private bool isGrounded = false;
 
     void Start()
@@ -23,17 +25,16 @@ public class Player2Controller : MonoBehaviour
         else if (Input.GetKey(KeyCode.RightArrow)) moveInputX = 1;
         else moveInputX = 0;
 
-        // Kiểm tra xem có chạm đất không - raycast từ dưới chân player
         RaycastHit2D hit = Physics2D.Raycast(
             new Vector2(transform.position.x, transform.position.y - 0.8f),
             Vector2.down,
             0.3f
         );
         
-        if (hit.collider != null)
+        // Kiểm tra chạm đất và không tự chạm vào chính mình
+        if (hit.collider != null && hit.collider.gameObject != gameObject)
         {
             isGrounded = true;
-            Debug.Log("HIT GROUND: " + hit.collider.name);
         }
         else
         {
