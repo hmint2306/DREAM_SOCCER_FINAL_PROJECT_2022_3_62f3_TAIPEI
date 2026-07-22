@@ -11,7 +11,10 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/_Scenes/01_Adding_BackGround.unity
     guid: 235c3a83ae9da4765bab0236770f4acf
-  - enabled: 1
+  - enabled: 0
     path: Assets/_Scenes/02_Change_Football.unity
     guid: 2ec6ef4c1b8ac46cb81bb0ed33c5bdee
+  - enabled: 1
+    path: Assets/_Scenes/03_Adding_Ball.unity
+    guid: 0ef81465701804b05a2b3a2ca471a00e
   m_configObjects: {}
