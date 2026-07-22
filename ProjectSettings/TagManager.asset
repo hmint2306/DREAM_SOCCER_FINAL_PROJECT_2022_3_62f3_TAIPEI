@@ -41,3 +41,12 @@ TagManager:
   - name: Default
     uniqueID: 0
     locked: 0
+  - name: BackGround
+    uniqueID: 2084961025
+    locked: 0
+  - name: "Khung th\xE0nh"
+    uniqueID: 3060433651
+    locked: 0
+  - name: Player
+    uniqueID: 1783818987
+    locked: 0
