@@ -3,9 +3,13 @@ using UnityEngine;
 public class Player2Controller : MonoBehaviour
 {
     public float moveSpeed = 5f;
+    public float jumpForce = 5f;
+    
     private Rigidbody2D rb;
     private float moveInputX = 0f;
-    private float moveInputY = 0f;
+    private int jumpCount = 0;
+    private int maxJumps = 2;
+    private bool isGrounded = false;
 
     void Start()
     {
@@ -14,19 +18,53 @@ public class Player2Controller : MonoBehaviour
 
     void Update()
     {
-        // Dùng phím WASD cho Player 2
-        if (Input.GetKey(KeyCode.A)) moveInputX = -1;
-        else if (Input.GetKey(KeyCode.D)) moveInputX = 1;
+        // Dùng phím Arrow
+        if (Input.GetKey(KeyCode.LeftArrow)) moveInputX = -1;
+        else if (Input.GetKey(KeyCode.RightArrow)) moveInputX = 1;
         else moveInputX = 0;
 
-        if (Input.GetKey(KeyCode.W)) moveInputY = 1;
-        else if (Input.GetKey(KeyCode.S)) moveInputY = -1;
-        else moveInputY = 0;
+        // Kiểm tra xem có chạm đất không - raycast từ dưới chân player
+        RaycastHit2D hit = Physics2D.Raycast(
+            new Vector2(transform.position.x, transform.position.y - 0.8f),
+            Vector2.down,
+            0.3f
+        );
+        
+        if (hit.collider != null)
+        {
+            isGrounded = true;
+            Debug.Log("HIT GROUND: " + hit.collider.name);
+        }
+        else
+        {
+            isGrounded = false;
+        }
+        
+        // Reset jump khi chạm đất
+        if (isGrounded && jumpCount > 0)
+        {
+            jumpCount = 0;
+        }
+
+        // Nhảy
+        if (Input.GetKeyDown(KeyCode.UpArrow) && jumpCount < maxJumps)
+        {
+            rb.velocity = new Vector2(rb.velocity.x, jumpForce);
+            jumpCount++;
+            isGrounded = false;
+        }
     }
 
     void FixedUpdate()
     {
-        Vector2 movement = new Vector2(moveInputX, moveInputY) * moveSpeed;
+        Vector2 movement = new Vector2(moveInputX, 0) * moveSpeed;
         rb.velocity = new Vector2(movement.x, rb.velocity.y);
+    }
+
+    void OnDrawGizmos()
+    {
+        Gizmos.color = Color.yellow;
+        Vector3 rayStart = new Vector3(transform.position.x, transform.position.y - 0.8f, 0);
+        Gizmos.DrawLine(rayStart, rayStart + Vector3.down * 0.3f);
     }
 }
