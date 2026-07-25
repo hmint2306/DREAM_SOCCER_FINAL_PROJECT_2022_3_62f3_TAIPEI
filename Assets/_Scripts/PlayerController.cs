@@ -1,27 +1,28 @@
 using UnityEngine;
+using System.Collections;
 
 public class PlayerController : MonoBehaviour
 {
+    [Header("Movement Settings")]
     public float moveSpeed = 5f;
-    public float jumpForce = 7f;
-    
+    public float jumpForce = 5f;
+
     private Rigidbody2D rb;
     private float moveInputX = 0f;
+    private bool facingRight = true;
+
+    // Các biến cho tính năng nhảy đôi
     private int jumpCount = 0;
-    
-    // Đặt chính xác số lần nhảy tối đa là 2
-    private int maxJumps = 2; 
+    private int maxJumps = 2;
     private bool isGrounded = false;
     private bool wasGrounded = false;
-    
-    // Tham chiếu đến banh
-    public Rigidbody2D ballRb;
-    public float kickForceX = 15f;  // Lực ngang
-    public float kickForceY = 20f;  // Lực dọc (bay lên) - tăng lên
 
     [Header("Kick Settings")]
-    public float kickRange = 2f;          // Phạm vi đá bóng - tăng lên cho dễ trúng
-    public float kickBufferTime = 0.15f;  // Thời gian "nhớ" phím đá nếu bấm hơi sớm/trễ
+    public Rigidbody2D ballRb;
+    public float kickForceX = 15f;
+    public float kickForceY = 20f;
+    public float kickRange = 2f;
+    public float kickBufferTime = 0.15f;
     private float kickBufferTimer = 0f;
 
     void Start()
@@ -31,46 +32,44 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
-        // Dùng phím WASD
-        if (Input.GetKey(KeyCode.A)) moveInputX = -1;
-        else if (Input.GetKey(KeyCode.D)) moveInputX = 1;
-        else moveInputX = 0;
+        // 1. DI CHUYỂN BẰNG A/D
+        if (Input.GetKey(KeyCode.A)) moveInputX = -1f;
+        else if (Input.GetKey(KeyCode.D)) moveInputX = 1f;
+        else moveInputX = 0f;
 
-        // Flip sprite theo hướng di chuyển
-        if (moveInputX > 0)
+        // 2. TỰ ĐỘNG QUAY MẶT THEO QUẢ BÓNG
+        if (ballRb != null)
         {
-            transform.localScale = new Vector3(1, 1, 1);  // Hướng phải
-        }
-        else if (moveInputX < 0)
-        {
-            transform.localScale = new Vector3(-1, 1, 1);  // Hướng trái
+            if (ballRb.transform.position.x > transform.position.x && !facingRight)
+            {
+                Flip();
+            }
+            else if (ballRb.transform.position.x < transform.position.x && facingRight)
+            {
+                Flip();
+            }
         }
 
+        // 3. KIỂM TRA CHẠM ĐẤT (Đồng bộ logic giống hệt Player 2)
         RaycastHit2D hit = Physics2D.Raycast(
             new Vector2(transform.position.x, transform.position.y - 0.8f),
             Vector2.down,
             0.3f
         );
-        
-        // Kiểm tra chạm đất và không tự chạm vào chính mình
+
         if (hit.collider != null && hit.collider.gameObject != gameObject)
-        {
             isGrounded = true;
-        }
         else
-        {
             isGrounded = false;
-        }
-        
-        // Reset jump chỉ khi landing (từ air sang ground)
+
+        // Reset số lần nhảy
         if (isGrounded && !wasGrounded)
         {
             jumpCount = 0;
         }
-        
         wasGrounded = isGrounded;
 
-        // Nhảy
+        // 4. XỬ LÝ NHẢY (W) - CHO PHÉP NHẢY ĐÔI
         if (Input.GetKeyDown(KeyCode.W) && jumpCount < maxJumps)
         {
             rb.velocity = new Vector2(rb.velocity.x, jumpForce);
@@ -78,7 +77,7 @@ public class PlayerController : MonoBehaviour
             isGrounded = false;
         }
 
-        // Đá bóng - dùng buffer nên không cần bấm đúng khung hình khi banh vừa vào tầm
+        // 5. XỬ LÝ SÚT BÓNG (NÚT Z)
         if (Input.GetKeyDown(KeyCode.Z))
         {
             kickBufferTimer = kickBufferTime;
@@ -87,12 +86,9 @@ public class PlayerController : MonoBehaviour
         if (kickBufferTimer > 0f)
         {
             kickBufferTimer -= Time.deltaTime;
-
             if (ballRb != null)
             {
                 float distanceToBall = Vector2.Distance(transform.position, ballRb.position);
-
-                // Không bắt buộc phải đang chạm đất nữa -> có thể đá/vô-lê cả khi đang nhảy
                 if (distanceToBall < kickRange)
                 {
                     KickBall();
@@ -108,33 +104,34 @@ public class PlayerController : MonoBehaviour
         rb.velocity = new Vector2(movement.x, rb.velocity.y);
     }
 
+    private void Flip()
+    {
+        facingRight = !facingRight;
+        Vector3 scaler = transform.localScale;
+        scaler.x *= -1;
+        transform.localScale = scaler;
+    }
+
     void KickBall()
     {
         Collider2D playerCol = GetComponent<Collider2D>();
         Collider2D ballCol = ballRb.GetComponent<Collider2D>();
 
-        // Tắt va chạm tạm thời giữa player và banh
-        // để tránh bị "đẩy" (depenetration) khi teleport banh đè lên player
-        // -> đây là nguyên nhân khiến player bị nhảy lên khi sút
         if (playerCol != null && ballCol != null)
         {
             Physics2D.IgnoreCollision(playerCol, ballCol, true);
             StartCoroutine(ReenableCollisionAfterDelay(playerCol, ballCol, 0.2f));
         }
 
-        // Di chuyển bóng tới chân player
         Vector2 kickPosition = new Vector2(transform.position.x, transform.position.y - 0.5f);
         ballRb.position = kickPosition;
-        ballRb.velocity = Vector2.zero;  // Reset vận tốc bóng
+        ballRb.velocity = Vector2.zero;
 
-        // Xác định hướng đá dựa trên hướng mặt player
-        float kickDirection = transform.localScale.x;
-
-        // Áp dụng lực sút cho bóng
+        float kickDirection = facingRight ? 1f : -1f;
         ballRb.AddForce(new Vector2(kickDirection * kickForceX, kickForceY), ForceMode2D.Impulse);
     }
 
-    private System.Collections.IEnumerator ReenableCollisionAfterDelay(Collider2D a, Collider2D b, float delay)
+    private IEnumerator ReenableCollisionAfterDelay(Collider2D a, Collider2D b, float delay)
     {
         yield return new WaitForSeconds(delay);
         if (a != null && b != null)
@@ -145,12 +142,13 @@ public class PlayerController : MonoBehaviour
 
     void OnDrawGizmos()
     {
+        // Vẽ tia Raycast chạm đất (màu vàng)
         Gizmos.color = Color.yellow;
         Vector3 rayStart = new Vector3(transform.position.x, transform.position.y - 0.8f, 0);
         Gizmos.DrawLine(rayStart, rayStart + Vector3.down * 0.3f);
 
-        // Vẽ phạm vi đá bóng để dễ chỉnh trong Editor
-        Gizmos.color = Color.red;
+        // Vẽ phạm vi sút bóng (màu xanh lá)
+        Gizmos.color = Color.green;
         Gizmos.DrawWireSphere(transform.position, kickRange);
     }
 }

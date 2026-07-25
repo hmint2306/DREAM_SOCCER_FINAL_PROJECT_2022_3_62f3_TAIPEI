@@ -11,7 +11,7 @@ TagManager:
   - Ground
   - Water
   - UI
-  - 
+  - Player
   - 
   - 
   - 
@@ -44,15 +44,9 @@ TagManager:
   - name: BackGround
     uniqueID: 2084961025
     locked: 0
-  - name: khung thanh sau
-    uniqueID: 3554591603
-    locked: 0
-  - name: ball
-    uniqueID: 2261124005
+  - name: "Khung th\xE0nh"
+    uniqueID: 3060433651
     locked: 0
   - name: Player
     uniqueID: 1783818987
-    locked: 0
-  - name: khung thanh truoc
-    uniqueID: 4228286545
     locked: 0
