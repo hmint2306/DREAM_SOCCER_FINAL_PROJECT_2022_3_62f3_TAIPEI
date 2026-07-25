@@ -44,9 +44,15 @@ TagManager:
   - name: BackGround
     uniqueID: 2084961025
     locked: 0
-  - name: "Khung th\xE0nh"
-    uniqueID: 3060433651
+  - name: Goal-Back
+    uniqueID: 4163476709
+    locked: 0
+  - name: ball
+    uniqueID: 4224638089
     locked: 0
   - name: Player
     uniqueID: 1783818987
+    locked: 0
+  - name: Goal-Front
+    uniqueID: 3060433651
     locked: 0
