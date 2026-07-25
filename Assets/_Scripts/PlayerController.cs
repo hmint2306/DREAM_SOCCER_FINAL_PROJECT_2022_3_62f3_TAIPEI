@@ -19,8 +19,8 @@ public class PlayerController : MonoBehaviour
 
     [Header("Kick Settings")]
     public Rigidbody2D ballRb;
-    public float kickForceX = 15f;
-    public float kickForceY = 20f;
+    public float kickForceX = 10f;  // ← Giảm từ 15 xuống 10 (lực sút nhẹ hơn)
+    public float kickForceY = 12f;  // ← Giảm từ 20 xuống 12 (parabol ít cong hơn)
     public float kickRange = 2f;
     public float kickBufferTime = 0.15f;
     private float kickBufferTimer = 0f;
