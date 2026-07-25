@@ -5,7 +5,16 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 1
+  - enabled: 0
     path: Assets/_Scenes/SampleScene.unity
     guid: 2cda990e2423bbf4892e6590ba056729
+  - enabled: 1
+    path: Assets/_Scenes/00_MainMenu.unity
+    guid: 01946bcded954294dbc8b045ef0f04c0
+  - enabled: 1
+    path: Assets/_Scenes/01_Adding_BackGround.unity
+    guid: 235c3a83ae9da4765bab0236770f4acf
+  - enabled: 1
+    path: Assets/_Scenes/02_Settings.unity
+    guid: d6836fd776fb3ed4ebfd38e339ecffcc
   m_configObjects: {}
