@@ -5,16 +5,19 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 0
-    path: Assets/_Scenes/SampleScene.unity
-    guid: 2cda990e2423bbf4892e6590ba056729
-  - enabled: 0
-    path: Assets/_Scenes/01_Adding_BackGround.unity
-    guid: 235c3a83ae9da4765bab0236770f4acf
-  - enabled: 0
-    path: Assets/_Scenes/02_Change_Football.unity
-    guid: 2ec6ef4c1b8ac46cb81bb0ed33c5bdee
   - enabled: 1
-    path: Assets/_Scenes/03_Adding_Ball.unity
-    guid: 0ef81465701804b05a2b3a2ca471a00e
+    path: Assets/_Scenes/16_Ball_Bounce.unity
+    guid: 23f1388cec9ca43009799b4f8da65a1e
+  - enabled: 1
+    path: Assets/_Scenes/00_MainMenu.unity
+    guid: 01946bcded954294dbc8b045ef0f04c0
+  - enabled: 1
+    path: Assets/_Scenes/02_Settings.unity
+    guid: d6836fd776fb3ed4ebfd38e339ecffcc
+  - enabled: 1
+    path: Assets/_Scenes/03_SelectMode.unity
+    guid: a89a37e3c0c768c4582ed1c96dc0c455
+  - enabled: 1
+    path: Assets/_Scenes/19_adding_skill.unity
+    guid: 1f0944f82a7b14f1698bdf2660160882
   m_configObjects: {}

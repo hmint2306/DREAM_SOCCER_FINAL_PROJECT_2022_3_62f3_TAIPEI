@@ -3,35 +3,48 @@ using UnityEngine;
 public class GoalZone : MonoBehaviour
 {
     public enum GoalSide { Home, Away }
-    public GoalSide goalSide;
-    
-    private bool hasScored = false;
-    private float resetDelay = 2f;
 
-    private void OnTriggerEnter2D(Collider2D collision)
+    [Header("Goal Configuration")]
+    public GoalSide goalSide;
+
+    [Header("Goal Line Detection")]
+    public float goalLineX = -4.8f;
+    public bool isLeftGoal = true;
+
+    private bool hasScored = false;
+
+    private void OnTriggerStay2D(Collider2D collision)
     {
-        // Kiểm tra xem vật thể va chạm có phải là bóng không
-        if (collision.CompareTag("Ball") && !hasScored)
+        if (hasScored) return;
+
+        if (collision.CompareTag("Ball"))
         {
-            hasScored = true;
-            
-            // Gọi hàm ghi bàn trong GameManager
-            GameManager.Instance.ScoreGoal(goalSide);
-            
-            Debug.Log($"⚽ GHI BÀN! Đội {goalSide} ghi bàn!");
-            
-            // Reset ball sau một thời gian
-            Invoke("ResetBall", resetDelay);
+            float ballX = collision.transform.position.x;
+            bool isBallInsideGoal = isLeftGoal ? (ballX < goalLineX) : (ballX > goalLineX);
+
+            if (isBallInsideGoal)
+            {
+                hasScored = true;
+
+                // Dừng ngay vận tốc bóng
+                Rigidbody2D ballRb = collision.GetComponent<Rigidbody2D>();
+                if (ballRb != null)
+                {
+                    ballRb.velocity *= 0.1f; 
+                    ballRb.angularVelocity *= 0.1f;
+                }
+
+                // Báo cho GameManager ghi bàn VÀ DỪNG TOÀN BỘ GAME
+                if (GameManager.Instance != null)
+                {
+                    GameManager.Instance.ScoreGoal(goalSide);
+                }
+            }
         }
     }
 
-    private void ResetBall()
+    public void ResetGoalZone()
     {
         hasScored = false;
-        Ball ball = FindObjectOfType<Ball>();
-        if (ball != null)
-        {
-            ball.ResetPosition();
-        }
     }
 }

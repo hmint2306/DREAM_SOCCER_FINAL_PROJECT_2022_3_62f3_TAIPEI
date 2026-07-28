@@ -1,9 +1,9 @@
 using UnityEngine;
-using TMPro; // Đã có sẵn trong file của bạn để dùng TextMeshPro
+using TMPro;
+using System.Collections;
 
 public class GameManager : MonoBehaviour
 {
-    // Singleton pattern
     public static GameManager Instance { get; private set; }
 
     [Header("Score Settings")]
@@ -14,40 +14,41 @@ public class GameManager : MonoBehaviour
     private AudioSource audioSource;
 
     [Header("Match Settings")]
-    public float halfDuration = 45f; // Thời gian 1 hiệp (45 giây)
+    public float halfDuration = 45f; 
+    public float goalResetDelay = 1.2f; // Thời gian chờ ăn mừng bàn thắng
+    public float startDelay = 1.5f;      // Thời gian đứng im 1.5s chờ bắt đầu/đá lại
+
     private float currentTime;
     private int currentHalf = 1;
     private bool isMatchOver = false;
+    private bool isResettingGoal = false;
+    private bool isGameActive = false;   // Kiểm tra xem quả bóng có đang trong cuộc hay không
 
     [Header("References")]
     public Transform player1;
     public Transform player2;
     public Transform ball;
-    [SerializeField] private TextMeshProUGUI timerText; // Text hiển thị thời gian
+    [SerializeField] private TextMeshProUGUI timerText;
 
-    // Biến lưu vị trí xuất phát
     private Vector2 p1StartPos;
     private Vector2 p2StartPos;
     private Vector2 ballStartPos;
 
-    // Biến lưu Rigidbody để reset vận tốc
     private Rigidbody2D p1Rb;
     private Rigidbody2D p2Rb;
     private Rigidbody2D ballRb;
 
+    private PlayerController p1Controller;
+    private PlayerController p2Controller;
+
     private void Awake()
     {
-        // Singleton setup
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
             return;
         }
         Instance = this;
-
-        // Lưu ý: Nếu bạn chỉ chơi trong 1 Scene và có lỗi mất object khi load lại, 
-        // hãy thêm // vào trước dòng DontDestroyOnLoad bên dưới để tắt nó đi.
-        DontDestroyOnLoad(gameObject);
 
         audioSource = GetComponent<AudioSource>();
         if (audioSource == null)
@@ -60,17 +61,18 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
-        // 1. Lưu lại vị trí ban đầu và lấy Rigidbody của 2 người chơi + quả bóng
         if (player1 != null)
         {
             p1StartPos = player1.position;
             p1Rb = player1.GetComponent<Rigidbody2D>();
+            p1Controller = player1.GetComponent<PlayerController>();
         }
 
         if (player2 != null)
         {
             p2StartPos = player2.position;
             p2Rb = player2.GetComponent<Rigidbody2D>();
+            p2Controller = player2.GetComponent<PlayerController>();
         }
 
         if (ball != null)
@@ -79,26 +81,25 @@ public class GameManager : MonoBehaviour
             ballRb = ball.GetComponent<Rigidbody2D>();
         }
 
-        // 2. Đặt thời gian bắt đầu
         currentTime = halfDuration;
+
+        // Vừa vào game -> Đứng im 1.5s rồi mới bắt đầu đá
+        StartCoroutine(StartRoundRoutine());
     }
 
     private void Update()
     {
-        // Nếu trận đấu kết thúc, dừng đếm giờ
-        if (isMatchOver) return;
+        // Chỉ đếm ngược thời gian khi game đang thực sự diễn ra
+        if (isMatchOver || !isGameActive) return;
 
-        // Trừ lùi thời gian
         currentTime -= Time.deltaTime;
 
-        // Cập nhật UI thời gian
         if (timerText != null)
         {
-            int seconds = Mathf.CeilToInt(currentTime);
+            int seconds = Mathf.CeilToInt(Mathf.Max(0, currentTime));
             timerText.text = seconds.ToString();
         }
 
-        // Kiểm tra hết giờ
         if (currentTime <= 0)
         {
             EndHalf();
@@ -109,36 +110,110 @@ public class GameManager : MonoBehaviour
     {
         if (currentHalf == 1)
         {
-            // Hết hiệp 1 -> Reset game và chuyển sang hiệp 2
             currentHalf = 2;
             currentTime = halfDuration;
-            Debug.Log("Hết hiệp 1! Bắt đầu hiệp 2!");
+            Debug.Log("📢 Hết hiệp 1! Bắt đầu hiệp 2!");
+
+            // Reset vị trí & chờ 1.5s chuẩn bị đá hiệp 2
             ResetPositions();
+            StartCoroutine(StartRoundRoutine());
         }
         else if (currentHalf == 2)
         {
-            // Hết hiệp 2 -> Kết thúc trận
             currentTime = 0;
             isMatchOver = true;
-            Debug.Log("Hết giờ! Kết thúc trận đấu!");
+            isGameActive = false;
+            Debug.Log("📢 Hết giờ! Kết thúc trận đấu!");
 
             if (timerText != null) timerText.text = "END";
 
-            // Dừng mọi chuyển động
-            if (p1Rb != null) p1Rb.velocity = Vector2.zero;
-            if (p2Rb != null) p2Rb.velocity = Vector2.zero;
-            if (ballRb != null) ballRb.velocity = Vector2.zero;
+            // Khóa hoàn toàn cầu thủ khi hết giờ
+            ResetPositions();
+            FreezeAllPlayers();
+        }
+    }
+
+    public void ScoreGoal(GoalZone.GoalSide team)
+    {
+        if (isMatchOver || isResettingGoal || !isGameActive) return;
+
+        isResettingGoal = true;
+        isGameActive = false; // Tạm dừng đồng hồ đếm ngược
+
+        // DỪNG LẬP TỨC PLAYER & AI KHÔNG CHO CHẠY LUNG TUNG
+        FreezeAllPlayers();
+
+        // Cộng điểm
+        if (team == GoalZone.GoalSide.Home)
+        {
+            awayTeamScore++;
+            Debug.Log("⚽ GOOOAL! Bàn thắng cho đội AWAY!");
+        }
+        else
+        {
+            homeTeamScore++;
+            Debug.Log("⚽ GOOOAL! Bàn thắng cho đội HOME!");
+        }
+
+        UpdateScoreUI();
+        PlayGoalSound();
+
+        // Tiến hành Reset vị trí và đếm lùi lượt đá mới
+        StartCoroutine(GoalResetRoutine());
+    }
+
+    private IEnumerator GoalResetRoutine()
+    {
+        // 1. Chờ 1.2s ngắn để xem bàn thắng / âm thanh
+        yield return new WaitForSeconds(goalResetDelay);
+
+        // 2. Reset vị trí bóng + người chơi
+        ResetPositions();
+
+        // 3. Đứng im 1.5s đếm lùi trước khi bắt đầu lượt mới
+        yield return StartCoroutine(StartRoundRoutine());
+
+        // 4. Bật lại vùng kiểm tra GoalZone
+        GoalZone[] zones = FindObjectsOfType<GoalZone>();
+        foreach (var zone in zones)
+        {
+            zone.ResetGoalZone();
+        }
+
+        isResettingGoal = false;
+    }
+
+    // Coroutine đếm lùi 1.5s trước khi thả cho chạy
+    private IEnumerator StartRoundRoutine()
+    {
+        isGameActive = false;
+
+        // Khóa di chuyển & triệt tiêu vận tốc
+        FreezeAllPlayers();
+        StopAllMovement();
+
+        // Chờ 1.5s
+        yield return new WaitForSeconds(startDelay);
+
+        // Mở khóa cho đá tiếp
+        if (!isMatchOver)
+        {
+            UnfreezeAllPlayers();
+            isGameActive = true;
         }
     }
 
     public void ResetPositions()
     {
-        // Reset lại vị trí
         if (player1 != null) player1.position = p1StartPos;
         if (player2 != null) player2.position = p2StartPos;
         if (ball != null) ball.position = ballStartPos;
 
-        // Reset vận tốc
+        StopAllMovement();
+    }
+
+    private void StopAllMovement()
+    {
         if (p1Rb != null) p1Rb.velocity = Vector2.zero;
         if (p2Rb != null) p2Rb.velocity = Vector2.zero;
 
@@ -149,26 +224,22 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    public void ScoreGoal(GoalZone.GoalSide team)
+    private void FreezeAllPlayers()
     {
-        // Nếu trận đấu đã kết thúc, không ghi nhận bàn thắng nữa
-        if (isMatchOver) return;
-
-        if (team == GoalZone.GoalSide.Home)
+        PlayerController[] players = FindObjectsOfType<PlayerController>();
+        foreach (var p in players)
         {
-            homeTeamScore++;
+            p.FreezePlayer();
         }
-        else
+    }
+
+    private void UnfreezeAllPlayers()
+    {
+        PlayerController[] players = FindObjectsOfType<PlayerController>();
+        foreach (var p in players)
         {
-            awayTeamScore++;
+            p.UnfreezePlayer();
         }
-
-        UpdateScoreUI();
-        PlayGoalSound();
-
-        // Tùy chọn: Đưa người chơi và bóng về giữa sân sau mỗi lần ghi bàn 
-        // Bỏ dấu // ở dòng bên dưới nếu bạn muốn bật tính năng này
-         ResetPositions();
     }
 
     private void UpdateScoreUI()
@@ -177,27 +248,22 @@ public class GameManager : MonoBehaviour
         {
             scoreText.text = $"{homeTeamScore} - {awayTeamScore}";
         }
-        else
-        {
-            Debug.LogWarning("Score Text không được gán trong Inspector!");
-        }
     }
 
     private void PlayGoalSound()
     {
-        if (audioSource != null && goalSoundEffect != null)
+        if (goalSoundEffect != null)
         {
-            audioSource.PlayOneShot(goalSoundEffect);
+            // Gọi AudioManager dập nhạc nền và kích hoạt hiệu ứng GOAL
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlayGoalSFXWithDucking(goalSoundEffect);
+            }
+            else if (audioSource != null)
+            {
+                // Dự phòng nếu không có AudioManager
+                audioSource.PlayOneShot(goalSoundEffect);
+            }
         }
-    }
-
-    public int GetHomeScore() => homeTeamScore;
-    public int GetAwayScore() => awayTeamScore;
-
-    public void ResetScore()
-    {
-        homeTeamScore = 0;
-        awayTeamScore = 0;
-        UpdateScoreUI();
     }
 }
